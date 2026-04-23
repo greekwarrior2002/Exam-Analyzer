@@ -197,6 +197,14 @@ export function GradingWorkspace({
         const msg = await res.text();
         throw new Error(msg);
       }
+      // Re-fetch graded_answers directly so the UI updates without a
+      // full page reload. router.refresh() alone won't reset our local
+      // useState(initialAnswers).
+      const { data: fresh } = await supabase
+        .from("graded_answers")
+        .select("*")
+        .eq("submission_id", submissionId);
+      if (fresh) setAnswers(fresh as GradedAnswer[]);
       toast.success("AI grading complete");
       router.refresh();
     } catch (e) {
