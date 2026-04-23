@@ -1,54 +1,18 @@
-"use client";
-
-import { useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
+import { Suspense } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { BookOpenCheck } from "lucide-react";
+import { LoginForm } from "./login-form";
 
-const ERROR_COPY: Record<string, string> = {
-  missing_code: "Auth code missing. Try the magic link again.",
-  auth_failed: "We couldn't verify that link. Try again.",
-  not_allowed: "That email isn't on the allowlist for this app.",
-};
+// Force dynamic rendering — useSearchParams() in LoginForm needs the request URL.
+export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const params = useSearchParams();
-  const nextParam = params.get("next") || "/";
-  const errorKey = params.get("error");
-  const errorMessage = errorKey ? ERROR_COPY[errorKey] ?? "Login failed." : null;
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email) return;
-    setLoading(true);
-    try {
-      const supabase = createClient();
-      const origin =
-        process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${origin}/api/auth/callback?next=${encodeURIComponent(nextParam)}`,
-        },
-      });
-      if (error) throw error;
-      setSent(true);
-      toast.success("Check your email for a magic link.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not send link.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <Card className="w-full max-w-sm">
@@ -60,33 +24,9 @@ export default function LoginPage() {
           <CardDescription>Sign in with a magic link.</CardDescription>
         </CardHeader>
         <CardContent>
-          {sent ? (
-            <div className="text-sm text-muted-foreground">
-              Sent a link to <span className="font-medium text-foreground">{email}</span>.
-              Check your inbox.
-            </div>
-          ) : (
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoFocus
-                />
-              </div>
-              {errorMessage && (
-                <p className="text-sm text-destructive">{errorMessage}</p>
-              )}
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Sending…" : "Send magic link"}
-              </Button>
-            </form>
-          )}
+          <Suspense fallback={<div className="h-24" />}>
+            <LoginForm />
+          </Suspense>
         </CardContent>
       </Card>
     </div>

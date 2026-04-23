@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { UploadCloud, ImageIcon, X, Sparkles } from "lucide-react";
+import { UploadCloud, ImageIcon, X, Sparkles, Camera } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -34,6 +34,7 @@ export function UploadDropzone({ assignmentId }: Props) {
   const [progress, setProgress] = useState(0);
   const [autoRunOcr, setAutoRunOcr] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
 
   const addFiles = useCallback((incoming: FileList | File[]) => {
     const arr = Array.from(incoming);
@@ -186,19 +187,40 @@ export function UploadDropzone({ assignmentId }: Props) {
         }`}
       >
         <UploadCloud className="mx-auto h-8 w-8 text-muted-foreground" />
-        <p className="mt-2 text-sm">Drag and drop exam images here</p>
+        <p className="mt-2 text-sm">Drag, drop, or tap below</p>
         <p className="text-xs text-muted-foreground">
-          JPG, PNG, or WebP · up to 15MB per page · multiple pages OK
+          JPG, PNG, or WebP · multiple pages OK
         </p>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="mt-4"
-          onClick={() => inputRef.current?.click()}
-        >
-          Choose files
-        </Button>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => cameraRef.current?.click()}
+          >
+            <Camera className="h-4 w-4" /> Take photo
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => inputRef.current?.click()}
+          >
+            <ImageIcon className="h-4 w-4" /> Choose files
+          </Button>
+        </div>
+        {/*
+          Two hidden inputs:
+          - cameraRef forces the camera on iOS/Android via `capture="environment"`.
+          - inputRef is a normal file picker; iOS still offers Camera + Photos there.
+        */}
+        <input
+          ref={cameraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          hidden
+          onChange={(e) => e.target.files && addFiles(e.target.files)}
+        />
         <input
           ref={inputRef}
           type="file"
