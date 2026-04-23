@@ -7,6 +7,45 @@ minutes.
 > The AI **suggests** grades. You always review, edit, and approve before
 > anything counts as final.
 
+## Quickstart (about 5 minutes)
+
+You need three accounts, all free tiers:
+[Supabase](https://supabase.com) ·
+[Anthropic](https://console.anthropic.com) ·
+[Vercel](https://vercel.com) (only for deploying).
+
+### 1. Create a Supabase project
+- New project, any region near you, set a DB password you'll forget.
+- When it's ready, open **SQL Editor → New query**, paste all of
+  [`supabase/migrations/0001_init.sql`](./supabase/migrations/0001_init.sql),
+  click **Run**. This creates every table, policy, and the `exams` bucket.
+- **Authentication → URL Configuration** → add `http://localhost:3000` (and
+  later your Vercel URL) to "Redirect URLs".
+
+### 2. Get your keys
+- Supabase → **Project Settings → API**: copy the URL, `anon` key, and
+  `service_role` key.
+- Anthropic → **API Keys**: create one.
+
+### 3. Configure + run
+```bash
+npm install
+npm run setup     # interactive — pastes keys into .env.local
+npm run dev
+```
+
+Open <http://localhost:3000>, enter your email (the one you put on the
+allowlist), click the magic link → you're in.
+
+### 4. Deploy (optional)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fgreekwarrior2002%2Fexam-analyzer&env=NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,ANTHROPIC_API_KEY,ALLOWED_EMAILS,NEXT_PUBLIC_SITE_URL&envDescription=Your%20Supabase%20%2B%20Anthropic%20keys%20and%20the%20single%20email%20allowed%20to%20sign%20in.&project-name=exam-analyzer&repository-name=exam-analyzer)
+
+After deploying, set `NEXT_PUBLIC_SITE_URL` to the deployed URL and add it
+to Supabase → Auth → Redirect URLs.
+
+---
+
 ## Features
 
 - Create assignments, define per-question rubrics (prompt, max points,
