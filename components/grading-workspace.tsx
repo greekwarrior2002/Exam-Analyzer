@@ -215,7 +215,14 @@ export function GradingWorkspace({
         body: JSON.stringify({ submission_id: submissionId }),
       });
       if (!res.ok) throw new Error(await res.text());
-      toast.success("OCR complete");
+      const body = (await res.json()) as { ok: number; failed: number; total: number };
+      if (body.failed > 0) {
+        toast.error(
+          `${body.failed} of ${body.total} page${body.total === 1 ? "" : "s"} failed — check Supabase for details`,
+        );
+      } else {
+        toast.success(`OCR complete (${body.ok}/${body.total})`);
+      }
       router.refresh();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "OCR failed");

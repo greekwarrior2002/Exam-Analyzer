@@ -1,5 +1,35 @@
 import Anthropic from "@anthropic-ai/sdk";
+import sharp from "sharp";
 import type { OcrInput, OcrResult } from "./index";
+
+// Anthropic rejects images whose base64-encoded size exceeds 5MB.
+// Base64 adds ~33% overhead, so we target raw bytes well under that.
+const MAX_RAW_BYTES = 3.5 * 1024 * 1024;
+
+async function ensureUnderLimit(
+  buffer: Buffer,
+  mimeType: string,
+): Promise<{ buffer: Buffer; mimeType: string }> {
+  if (buffer.length <= MAX_RAW_BYTES) return { buffer, mimeType };
+
+  // Step down resolution + JPEG quality until it fits. Exam pages still
+  // OCR reliably at 2000px wide; we rarely need a second pass.
+  let width = 2400;
+  let quality = 85;
+  for (let i = 0; i < 5; i++) {
+    const out = await sharp(buffer)
+      .rotate() // honor EXIF orientation (phone photos)
+      .resize({ width, withoutEnlargement: true })
+      .jpeg({ quality })
+      .toBuffer();
+    if (out.length <= MAX_RAW_BYTES) {
+      return { buffer: out, mimeType: "image/jpeg" };
+    }
+    width = Math.floor(width * 0.8);
+    quality = Math.max(50, quality - 10);
+  }
+  throw new Error("Image too large even after downscaling");
+}
 
 // Privacy note: only the page image is sent to Anthropic. No student names,
 // no assignment metadata, no rubric. This keeps external exposure minimal
@@ -24,12 +54,12 @@ export async function extractTextWithClaude({
   const model = process.env.ANTHROPIC_MODEL_OCR || "claude-sonnet-4-6";
   const client = new Anthropic({ apiKey });
 
-  // Anthropic expects base64 image data. Buffer → base64 is safe up to ~5MB;
-  // we size-check upstream in the API route before calling here.
-  const base64 = buffer.toString("base64");
+  // Downscale if the image would exceed Anthropic's 5MB base64 limit.
+  const resized = await ensureUnderLimit(buffer, mimeType);
+  const base64 = resized.buffer.toString("base64");
   const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
-  const safeMime = (allowed as readonly string[]).includes(mimeType)
-    ? mimeType
+  const safeMime = (allowed as readonly string[]).includes(resized.mimeType)
+    ? resized.mimeType
     : "image/jpeg";
 
   const message = await client.messages.create({
